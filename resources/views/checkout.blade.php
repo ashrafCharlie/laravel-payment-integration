@@ -1,4 +1,9 @@
 <x-layout title="check-out">
+
+    @if (session('error'))
+        <p>{{ session('error') }}</p>
+    @endif
+    <br>
     <h1>Checkout</h1>
     <form action="{{route('payment.checkout')}}" method="POST">
         @csrf

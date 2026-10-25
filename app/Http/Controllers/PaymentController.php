@@ -55,6 +55,12 @@ class PaymentController extends Controller
         ];
 
         $response = Http::asForm()->post('https://sandbox.sslcommerz.com/gwprocess/v4/api.php',$paymentData);
+        if (!$response->successful()) {
+            return back()->with('error', 'Payment gateway request failed.');
+        }
+        if (empty($response->json('GatewayPageURL'))) {
+            return back()->with('error', 'Payment gateway URL not found.');
+        }
         return redirect()->away($response['GatewayPageURL']);
     }
 
@@ -102,7 +108,7 @@ class PaymentController extends Controller
         $sameCurrency = ($data['currency'] ?? '') === $payment->currency;
         $sameAmount = isset($data['amount']) && (float) $data['amount'] === (float) $payment->amount;
 
-        if(!$sameTransaction || !$sameCurrency ||  !$sameAmount){
+        if(!$validStatus || !$sameTransaction || !$sameCurrency ||  !$sameAmount){
             return response('Payment verification failed.', 422);
         }
 
@@ -111,6 +117,34 @@ class PaymentController extends Controller
 
     }
 
+    public function fail(Request $request)
+    {
+        $payment = Payment::where(
+            'transaction_id',
+            $request->input('tran_id')
+        )->first();
+
+        if($payment && $payment->status === 'pending'){
+            $payment->update([
+                'status' => 'failed',
+            ]);
+        }
+
+        return'Payment failed.';
+
+    }
+
+    public function cancel(Request $request){
+        $payment = Payment::where(
+            'transaction_id',
+            $request->input('tran_id')
+        )->first();
+
+        if($payment && $payment->status === 'pending'){
+            $payment->update(['status' => 'cancelled']);
+        }
+        return  "Payment cancelled.";
+    }
 
 
 
